@@ -54,11 +54,11 @@ jobs:
     #     unzip awscliv2.zip
     #     sudo ./aws/install --update
 
-      - name: Update kube config
-        env:
-          STAGE_EKS_CLUSTER_NAME: ${{ secrets.STAGE_EKS_CLUSTER_NAME }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: aws eks update-kubeconfig --name $STAGE_EKS_CLUSTER_NAME --region $AWS_REGION
+      # - name: Update kube config
+      #   env:
+      #     STAGE_EKS_CLUSTER_NAME: ${{ secrets.STAGE_EKS_CLUSTER_NAME }}
+      #     AWS_REGION: ${{ secrets.AWS_REGION }}
+      #   run: aws eks update-kubeconfig --name $STAGE_EKS_CLUSTER_NAME --region $AWS_REGION
 
       - name: Deploy to EKS
         shell: bash
@@ -66,6 +66,8 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}        
           IMAGE_TAG: ${{ steps.commit.outputs.short }}
           VERSION: ${{ steps.image-tag.outputs.tag }}
+          STAGE_EKS_CLUSTER_NAME: ${{ secrets.STAGE_EKS_CLUSTER_NAME }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
               dateofdeploy=$(date +%s)
               START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -90,6 +92,7 @@ jobs:
                   }
                 }' \
                 "https://api.pagerduty.com/maintenance_windows"
+              aws eks update-kubeconfig --name $STAGE_EKS_CLUSTER_NAME --region $AWS_REGION
               kubectl --namespace=accis-app set image deployment/backend backend=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:1.11.6
               kubectl -n accis-app patch deployment backend  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"$dateofdeploy\"}}}}}"
               kubectl --namespace=accis-app set image deployment/celeryapp celeryapp=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:1.11.6
