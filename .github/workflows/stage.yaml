@@ -61,7 +61,6 @@ jobs:
       #   run: aws eks update-kubeconfig --name $STAGE_EKS_CLUSTER_NAME --region $AWS_REGION
 
       - name: Deploy to EKS
-        shell: bash
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}        
           IMAGE_TAG: ${{ steps.commit.outputs.short }}
@@ -69,29 +68,6 @@ jobs:
           STAGE_EKS_CLUSTER_NAME: ${{ secrets.STAGE_EKS_CLUSTER_NAME }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-              dateofdeploy=$(date +%s)
-              START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-              END_TIME=$(date -u -d "+10 minutes" +"%Y-%m-%dT%H:%M:%SZ")
-              DESCRIPTION=$dateofdeploy
-              curl -X POST \
-                -H "Content-Type: application/json" \
-                -H "Authorization: Token token=${{ secrets.PAGERDUTY_API_KEY }}" \
-                -d '{
-                  "maintenance_window": 
-                  {
-                    "type": "maintenance_window", 
-                    "start_time": "$START_TIME",  
-                    "end_time": "$END_TIME",  
-                    "description": "$DESCRIPTION",
-                    "services": [
-                    {
-                      "id": "${{ secrets.PAGERDUTY_SERVICE_ID }}",
-                      "type": "service_reference"
-                    }
-                    ]
-                  }
-                }' \
-                "https://api.pagerduty.com/maintenance_windows"
               aws eks update-kubeconfig --name $STAGE_EKS_CLUSTER_NAME --region $AWS_REGION
               kubectl --namespace=accis-app set image deployment/backend backend=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:1.11.6
               kubectl -n accis-app patch deployment backend  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"$dateofdeploy\"}}}}}"
@@ -101,15 +77,6 @@ jobs:
               kubectl --namespace=accis-app set image deployment/hpaceleryapp  hpaceleryapp=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:1.11.6 hpaceleryapp-queue-ae=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:1.11.6 hpaceleryapp-queue=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:1.11.6
               kubectl -n accis-app patch deployment hpaceleryapp  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"$dateofdeploy\"}}}}}"
 
-              bash ./docker/jenkinsautomate.sh $dateofdeploy ${{ secrets.PAGERDUTY_API_KEY}} $START_TIME 
-              response=$(curl  -g\
-                -H "Accept: application/vnd.pagerduty+json;version=2" \
-                -H "Authorization: Token token=${{ secrets.PAGERDUTY_API_KEY }}" \
-                "https://api.pagerduty.com/maintenance_windows?query=$dateofdeploy")
-              maintenance_window_id=$(echo "$response" | jq -r '.maintenance_windows[0].id') 
-              curl -X DELETE \
-              -H "Accept: application/vnd.pagerduty+json;version=2" \
-              -H "Authorization: Token token=${{ secrets.PAGERDUTY_API_KEY }}" \
-              "https://api.pagerduty.com/maintenance_windows/$maintenance_window_id"
+
   
 
