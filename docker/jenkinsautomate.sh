@@ -5,7 +5,7 @@ isnewberunning="false"
 echo "is it running ? $isnewberunning"
 retrybecount=0
 while [ "$isnewberunning" != "true true true" ]; do
-   if [ "$retrybecount" = "20" ]; then
+   if [ "$retrybecount" = "200" ]; then
        exit 1;
    fi
    sleep 10;
