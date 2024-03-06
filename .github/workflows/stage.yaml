@@ -74,24 +74,24 @@ jobs:
               END_TIME=$(date -u -d "+10 minutes" +"%Y-%m-%dT%H:%M:%SZ")
               DESCRIPTION=$dateofdeploy
               curl -X POST \
-                -H "Content-Type: application/json" \
-                -H "Authorization: Token token=${{ secrets.PAGERDUTY_API_KEY }}" \
-                -d '{
-                  "maintenance_window": 
+              -H "Content-Type: application/json" \
+              -H "Authorization: Token token=${{ secrets.PAGERDUTY_API_KEY }}" \
+              -d '{
+                "maintenance_window": 
+                {
+                  "type": "maintenance_window", 
+                  "start_time": "'$START_TIME'",  
+                  "end_time": "'$END_TIME'",  
+                  "description": "'$DESCRIPTION'",
+                  "services": [
                   {
-                    "type": "maintenance_window", 
-                    "start_time": "$START_TIME",  
-                    "end_time": "$END_TIME",  
-                    "description": "$DESCRIPTION",
-                    "services": [
-                    {
-                      "id": "${{ secrets.PAGERDUTY_SERVICE_ID }}",
-                      "type": "service_reference"
-                    }
-                    ]
+                    "id": "${{ secrets.PAGERDUTY_SERVICE_ID }}",
+                    "type": "service_reference"
                   }
-                }' \
-                "https://api.pagerduty.com/maintenance_windows"
+                  ]
+                }
+              }' \
+              "https://api.pagerduty.com/maintenance_windows"
               aws eks update-kubeconfig --name $STAGE_EKS_CLUSTER_NAME --region $AWS_REGION
               kubectl --namespace=accis-app set image deployment/backend backend=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION}
               kubectl -n accis-app patch deployment backend  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"$dateofdeploy\"}}}}}"
