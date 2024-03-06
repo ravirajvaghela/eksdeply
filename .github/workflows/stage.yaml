@@ -94,12 +94,12 @@ jobs:
               "https://api.pagerduty.com/maintenance_windows"
               aws eks update-kubeconfig --name $STAGE_EKS_CLUSTER_NAME --region $AWS_REGION
               kubectl --namespace=accis-app set image deployment/backend backend=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION}
-              kubectl -n accis-app patch deployment backend  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"$dateofdeploy\"}}}}}"
+              kubectl -n accis-app patch deployment backend  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"backend-$dateofdeploy\"}}}}}"
               kubectl --namespace=accis-app set image deployment/celeryapp celeryapp=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} 
                 #celeryapp-queue=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} celeryapp-queue-ae=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION}
-              kubectl -n accis-app patch deployment celeryapp  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"$dateofdeploy\"}}}}}"
+              kubectl -n accis-app patch deployment celeryapp  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"celeryapp-$dateofdeploy\"}}}}}"
               kubectl --namespace=accis-app set image deployment/hpaceleryapp  hpaceleryapp=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} hpaceleryapp-queue-ae=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} hpaceleryapp-queue=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION}
-              kubectl -n accis-app patch deployment hpaceleryapp  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"$dateofdeploy\"}}}}}"
+              kubectl -n accis-app patch deployment hpaceleryapp  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"hpaceleryapp-$dateofdeploy\"}}}}}"
 
               bash ./docker/jenkinsautomate.sh "backend-$dateofdeploy"
               bash ./docker/jenkinsautomate.sh "celeryapp-$dateofdeploy"
