@@ -101,7 +101,10 @@ jobs:
               kubectl --namespace=accis-app set image deployment/hpaceleryapp  hpaceleryapp=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} hpaceleryapp-queue-ae=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} hpaceleryapp-queue=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION}
               kubectl -n accis-app patch deployment hpaceleryapp  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"$dateofdeploy\"}}}}}"
 
-              bash ./docker/jenkinsautomate.sh $dateofdeploy ${{ secrets.PAGERDUTY_API_KEY}} $START_TIME 
+              bash ./docker/jenkinsautomate.sh "backend-$dateofdeploy"
+              bash ./docker/jenkinsautomate.sh "celery-$dateofdeploy"
+              bash ./docker/jenkinsautomate.sh "hpaceleryapp-$dateofdeploy"
+
               response=$(curl  -g\
                 -H "Accept: application/vnd.pagerduty+json;version=2" \
                 -H "Authorization: Token token=${{ secrets.PAGERDUTY_API_KEY }}" \
