@@ -102,7 +102,7 @@ jobs:
               kubectl -n accis-app patch deployment hpaceleryapp  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"$dateofdeploy\"}}}}}"
 
               bash ./docker/jenkinsautomate.sh "backend-$dateofdeploy"
-              bash ./docker/jenkinsautomate.sh "celery-$dateofdeploy"
+              bash ./docker/jenkinsautomate.sh "celeryapp-$dateofdeploy"
               bash ./docker/jenkinsautomate.sh "hpaceleryapp-$dateofdeploy"
 
               response=$(curl  -g\
