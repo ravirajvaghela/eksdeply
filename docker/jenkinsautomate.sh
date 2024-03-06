@@ -11,6 +11,6 @@ while [[ "$isnewberunning" != *"true"* ]]; do
   sleep 10;
   ((retrybecount++))
   echo "$dateofdeploy running checking : $retrybecount times"
-  isnewberunning=$(kubectl get pods --selector=date="$dateofdeploy" -n mccpd -o jsonpath='{.items[*].status.containerStatuses[0].ready}')
+  isnewberunning=$(kubectl get pods --selector=date="$dateofdeploy" -n accis-app -o jsonpath='{.items[*].status.containerStatuses[0].ready}')
   echo "is it running ? $isnewberunning"
 done
