@@ -37,7 +37,7 @@ jobs:
           description: 'Github Action - BE'
 
       - name: Deploying
-        uses: appleboy/ssh-action@v0.1.4
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USERNAME }}
