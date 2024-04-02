@@ -1,120 +1,23 @@
-name: Build and Deploy to STAGE
+### For deploying latest revision to Dev Server
 
-on:
-  push:
-    branches:
-      - main   
-                                               
-jobs:
-  build-deploy:
-    name: Build and Deploy to STAGE Environment
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@13d241b293754004c80624b5567555c4a39ffbe3
+      - name: Whitelisting IP
+        uses: sohelamin/aws-security-group-add-ip-action@master
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_STAGE }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_STAGE }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: 'us-east-1'
+          aws-security-group-id: ${{ secrets.DEV_AWS_SECURITY_GROUP_ID }}
+          port: '22'
+          command_timeout: 200m
+          description: 'Github Action - BE'
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2
-
-      #- name: Cache Docker layers
-      #  uses: actions/cache@v2
-      #  with:
-      #    path: /tmp/.buildx-cache
-      #    key: ${{ runner.os }}-buildx-${{ github.sha }}
-      #    restore-keys: |
-      #      ${{ runner.os }}-buildx-
-
-
-### For deploying latest revision to STAGE Server
-
-      # - name: Whitelisting IP
-      #   uses: sohelamin/aws-security-group-add-ip-action@master
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: 'us-east-1'
-      #     aws-security-group-id: ${{ secrets.STAGE_AWS_SECURITY_GROUP_ID }}
-      #     port: '22'
-      #     command_timeout: 200m
-      #     description: 'Github Action - BE'
-
-    # - name: Install AWS CLI v2
-    #   run: |
-    #     sudo apt-get update && sudo apt-get install -y unzip
-    #     curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    #     unzip awscliv2.zip
-    #     sudo ./aws/install --update
-
-      # - name: Update kube config
-      #   env:
-      #     STAGE_EKS_CLUSTER_NAME: ${{ secrets.STAGE_EKS_CLUSTER_NAME }}
-      #     AWS_REGION: ${{ secrets.AWS_REGION }}
-      #   run: aws eks update-kubeconfig --name $STAGE_EKS_CLUSTER_NAME --region $AWS_REGION
-
-      - name: Deploy to EKS
-
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}        
-          IMAGE_TAG: ${{ steps.commit.outputs.short }}
-          STAGE_EKS_CLUSTER_NAME: ${{ secrets.STAGE_EKS_CLUSTER_NAME }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          VERSION : "1.11.6"
-        run: |
-              dateofdeploy=$(date +%s)
-              START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-              END_TIME=$(date -u -d "+10 minutes" +"%Y-%m-%dT%H:%M:%SZ")
-              DESCRIPTION=$dateofdeploy
-              curl -X POST \
-              -H "Content-Type: application/json" \
-              -H "Authorization: Token token=${{ secrets.PAGERDUTY_API_KEY }}" \
-              -d '{
-                "maintenance_window": 
-                {
-                  "type": "maintenance_window", 
-                  "start_time": "'$START_TIME'",  
-                  "end_time": "'$END_TIME'",  
-                  "description": "'$DESCRIPTION'",
-                  "services": [
-                  {
-                    "id": "${{ secrets.PAGERDUTY_SERVICE_ID }}",
-                    "type": "service_reference"
-                  }
-                  ]
-                }
-              }' \
-              "https://api.pagerduty.com/maintenance_windows"
-              aws eks update-kubeconfig --name $STAGE_EKS_CLUSTER_NAME --region $AWS_REGION
-              kubectl --namespace=accis-app set image deployment/backend backend=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION}
-              kubectl -n accis-app patch deployment backend  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"backend-$dateofdeploy\"}}}}}"
-              kubectl --namespace=accis-app set image deployment/celeryapp celeryapp=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} 
-                #celeryapp-queue=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} celeryapp-queue-ae=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION}
-              kubectl -n accis-app patch deployment celeryapp  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"celeryapp-$dateofdeploy\"}}}}}"
-              kubectl --namespace=accis-app set image deployment/hpaceleryapp  hpaceleryapp=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} hpaceleryapp-queue-ae=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION} hpaceleryapp-queue=052237514985.dkr.ecr.us-east-1.amazonaws.com/api:${VERSION}
-              kubectl -n accis-app patch deployment hpaceleryapp  -p "{\"spec\":{\"template\":{\"metadata\":{\"labels\":{\"date\":\"hpaceleryapp-$dateofdeploy\"}}}}}"
-
-              bash ./docker/jenkinsautomate.sh "backend-$dateofdeploy"
-              bash ./docker/jenkinsautomate.sh "celeryapp-$dateofdeploy"
-              bash ./docker/jenkinsautomate.sh "hpaceleryapp-$dateofdeploy"
-
-              response=$(curl  -g\
-                -H "Accept: application/vnd.pagerduty+json;version=2" \
-                -H "Authorization: Token token=${{ secrets.PAGERDUTY_API_KEY }}" \
-                "https://api.pagerduty.com/maintenance_windows?query=$dateofdeploy")
-              maintenance_window_id=$(echo "$response" | jq -r '.maintenance_windows[0].id') 
-              curl -X DELETE \
-              -H "Accept: application/vnd.pagerduty+json;version=2" \
-              -H "Authorization: Token token=${{ secrets.PAGERDUTY_API_KEY }}" \
-              "https://api.pagerduty.com/maintenance_windows/$maintenance_window_id"
-
-
-  
-
+      - name: Deploying
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ${{ secrets.DEV_USERNAME }}
+          key: ${{ secrets.DEV_KEY }}
+          port: '22'
+          command_timeout: 200m
+          script: |
+            kubectl get node
