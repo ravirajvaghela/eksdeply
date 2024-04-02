@@ -1,5 +1,30 @@
 ### For deploying latest revision to Dev Server
+name: Build and Deploy to STAGE
 
+on:
+  push:
+    branches:
+      - main   
+                                               
+jobs:
+  build-deploy:
+    name: Build and Deploy to STAGE Environment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@13d241b293754004c80624b5567555c4a39ffbe3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_STAGE }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_STAGE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@aaf69d68aa3fb14c1d5a6be9ac61fe15b48453a2
       - name: Whitelisting IP
         uses: sohelamin/aws-security-group-add-ip-action@master
         with:
